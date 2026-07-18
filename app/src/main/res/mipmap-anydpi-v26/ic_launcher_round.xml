@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Sets the background behind the icon -->
+    <background android:drawable="@android:color/white"/>
+    <!-- Points directly to your rotating splash asset -->
+    <foreground android:drawable="@drawable/ic_ludo_dice"/>
+</adaptive-icon>

@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1B1B2F">
+
+    <!-- Header -->
+
+    <TextView
+        android:id="@+id/tvHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="👑 Ludo Queen"
+        android:textStyle="bold"
+        android:textSize="22sp"
+        android:textColor="#FFD700"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <TextView
+        android:id="@+id/tvTurnIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Turn : P1"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:textSize="16sp"
+        android:layout_marginTop="4dp"
+        app:layout_constraintTop_toBottomOf="@id/tvHeader"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <TextView
+        android:id="@+id/tvPrompt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Select a piece to move"
+        android:textColor="#00E5FF"
+        android:textStyle="bold"
+        android:textSize="13sp"
+        android:visibility="gone"
+        android:layout_marginTop="2dp"
+        app:layout_constraintTop_toBottomOf="@id/tvTurnIndicator"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- ================= BOARD (FULL WIDTH) ================= -->
+
+    <com.example.ludoqueen.LudoBoardView
+        android:id="@+id/ludoBoardView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- ================= P1 (RED): TOP LEFT ================= -->
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginStart="2dp"
+        android:layout_marginBottom="2dp"
+        app:layout_constraintBottom_toTopOf="@id/ludoBoardView"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/tvLabelP1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="P1"
+            android:textStyle="bold"
+            android:textColor="#F44336"/>
+
+        <com.example.ludoqueen.DiceView
+            android:id="@+id/diceP1"
+            android:layout_width="46dp"
+            android:layout_height="46dp"/>
+
+    </LinearLayout>
+
+    <!-- ================= P2 (GREEN): TOP RIGHT ================= -->
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginEnd="2dp"
+        android:layout_marginBottom="2dp"
+        app:layout_constraintBottom_toTopOf="@id/ludoBoardView"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tvLabelP2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="P2"
+            android:textStyle="bold"
+            android:textColor="#4CAF50"/>
+
+        <com.example.ludoqueen.DiceView
+            android:id="@+id/diceP2"
+            android:layout_width="46dp"
+            android:layout_height="46dp"/>
+
+    </LinearLayout>
+
+    <!-- ================= P3 (YELLOW): BOTTOM RIGHT ================= -->
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginEnd="2dp"
+        android:layout_marginTop="2dp"
+        app:layout_constraintTop_toBottomOf="@id/ludoBoardView"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tvLabelP3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="P3"
+            android:textStyle="bold"
+            android:textColor="#FFD600"/>
+
+        <com.example.ludoqueen.DiceView
+            android:id="@+id/diceP3"
+            android:layout_width="46dp"
+            android:layout_height="46dp"/>
+
+    </LinearLayout>
+
+    <!-- ================= P4 (BLUE): BOTTOM LEFT ================= -->
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:layout_marginStart="2dp"
+        android:layout_marginTop="2dp"
+        app:layout_constraintTop_toBottomOf="@id/ludoBoardView"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <TextView
+            android:id="@+id/tvLabelP4"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="P4"
+            android:textStyle="bold"
+            android:textColor="#2196F3"/>
+
+        <com.example.ludoqueen.DiceView
+            android:id="@+id/diceP4"
+            android:layout_width="46dp"
+            android:layout_height="46dp"/>
+
+    </LinearLayout>
+
+    <!-- Turn Banner -->
+
+    <TextView
+        android:id="@+id/tvTurnBanner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="10dp"
+        android:text="P1's Move"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:background="#CC000000"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/ludoBoardView"
+        app:layout_constraintBottom_toBottomOf="@id/ludoBoardView"
+        app:layout_constraintStart_toStartOf="@id/ludoBoardView"
+        app:layout_constraintEnd_toEndOf="@id/ludoBoardView"/>
+
+    <!-- WIN OVERLAY -->
+
+    <LinearLayout
+        android:id="@+id/winOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#CC000000"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tvWinMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🏆 P1 Won!"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#FFD700"
+            android:layout_marginBottom="30dp"/>
+
+        <Button
+            android:id="@+id/btnRestart"
+            android:layout_width="200dp"
+            android:layout_height="55dp"
+            android:text="RESTART"
+            android:textStyle="bold"/>
+
+        <Button
+            android:id="@+id/btnExit"
+            android:layout_width="200dp"
+            android:layout_height="55dp"
+            android:layout_marginTop="10dp"
+            android:text="EXIT"
+            android:textStyle="bold"/>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
