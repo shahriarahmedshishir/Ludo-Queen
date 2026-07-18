@@ -47,7 +47,7 @@ class PlayerSelectorActivity : AppCompatActivity() {
         btnStartGame.setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
             intent.putExtra("PLAYER_COUNT", selectedPlayerCount)
-            intent.putExtra("DUO_MODE", isDuoMode)
+            intent.putExtra("IS_TEAM_MODE", isDuoMode)
             startActivity(intent)
         }
 

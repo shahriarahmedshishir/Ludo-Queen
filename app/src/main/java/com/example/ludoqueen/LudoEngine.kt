@@ -1,15 +1,14 @@
 package com.example.ludoqueen
 
 import kotlin.random.Random
+import android.util.Log
 
 class LudoEngine(
     val playerLabels: List<String>,
     val isTeamMode: Boolean = false
 ) {
     class Token(val playerIndex: Int, val tokenIndex: Int) {
-        // -1 = Yard, 0-50 = Main Track, 51-55 = Home Column, 56 = Goal
         var localPosition = -1
-
         fun isHome() = localPosition == -1
         fun isGoal() = localPosition == 56
     }
@@ -32,13 +31,19 @@ class LudoEngine(
     private var activePlayers = listOf(0, 1, 2, 3)
     private val SAFE_CELLS = LudoPathData.SAFE_SQUARES
     private val PARTNER_MAP = mapOf(0 to 2, 2 to 0, 1 to 3, 3 to 1)
+    private fun areTeammates(player1: Int, player2: Int): Boolean {
+
+        if (!isTeamMode) return false
+
+        return (player1 == 0 && player2 == 2) ||
+                (player1 == 2 && player2 == 0) ||
+                (player1 == 1 && player2 == 3) ||
+                (player1 == 3 && player2 == 1)
+    }
     private val forcedInputs = mutableMapOf<Int, MutableList<Int>>()
     private var consecutiveSixesCount = 0
 
-    fun setActivePlayers(players: List<Int>) {
-        activePlayers = players
-        currentPlayerIndex = activePlayers.first()
-    }
+    fun setActivePlayers(players: List<Int>) { activePlayers = players; currentPlayerIndex = activePlayers.first() }
 
     fun currentPlayer(): Player = players[currentPlayerIndex]
 
@@ -70,49 +75,130 @@ class LudoEngine(
     }
 
     fun moveToken(playerIndex: Int, tokenIndex: Int, diceValue: Int): MoveResult {
+
         val roller = players[playerIndex]
-        val targetIdx = if (isTeamMode && roller.hasWon()) (PARTNER_MAP[playerIndex] ?: playerIndex) else playerIndex
+        val targetIdx =
+            if (isTeamMode && roller.hasWon())
+                PARTNER_MAP[playerIndex] ?: playerIndex
+            else
+                playerIndex
+
         val token = players[targetIdx].tokens[tokenIndex]
 
+        // ---------------- Move ----------------
+
         if (token.isHome()) {
-            if (diceValue == 6) token.localPosition = 0
+            if (diceValue != 6) {
+                return MoveResult(false, emptyList(), false)
+            }
+            token.localPosition = 0
         } else {
             token.localPosition += diceValue
         }
 
-        if (diceValue == 6) consecutiveSixesCount++ else consecutiveSixesCount = 0
+        if (diceValue == 6)
+            consecutiveSixesCount++
+        else
+            consecutiveSixesCount = 0
 
         val reachedFinish = token.isGoal()
-        if (reachedFinish && !leaderboard.contains(targetIdx) && players[targetIdx].hasWon()) {
+
+        if (reachedFinish &&
+            players[targetIdx].hasWon() &&
+            !leaderboard.contains(targetIdx)
+        ) {
             leaderboard.add(targetIdx)
         }
 
         val captured = mutableListOf<Token>()
-        // Captures only occur on the main track (0 to 50)
+
+        // ---------------- Capture ----------------
+
         if (token.localPosition in 0..50) {
-            val absolutePos = getAbsolutePosition(targetIdx, token.localPosition)
-            if (absolutePos !in SAFE_CELLS) {
-                players.forEach { opponent ->
-                    val isTeammate = isTeamMode && (PARTNER_MAP[targetIdx] == opponent.playerIndex)
-                    if (opponent.playerIndex != targetIdx && !isTeammate) {
-                        opponent.tokens.forEach { oppToken ->
-                            if (oppToken.localPosition in 0..50 &&
-                                getAbsolutePosition(opponent.playerIndex, oppToken.localPosition) == absolutePos) {
-                                oppToken.localPosition = -1
-                                captured.add(oppToken)
-                            }
+
+            val myAbsolute =
+                getAbsolutePosition(targetIdx, token.localPosition)
+
+            if (myAbsolute !in SAFE_CELLS) {
+
+                val friendly = mutableListOf<Token>()
+                val enemy = mutableListOf<Token>()
+
+                players.forEach { player ->
+
+                    player.tokens.forEach { piece ->
+
+                        if (piece.localPosition !in 0..50)
+                            return@forEach
+
+                        val abs =
+                            getAbsolutePosition(
+                                player.playerIndex,
+                                piece.localPosition
+                            )
+
+                        if (abs != myAbsolute)
+                            return@forEach
+
+                        if (
+                            player.playerIndex == targetIdx ||
+                            (isTeamMode &&
+                                    areTeammates(targetIdx, player.playerIndex))
+                        ) {
+                            friendly.add(piece)
+                        } else {
+                            enemy.add(piece)
+                        }
+                    }
+                }
+
+                val friendlyCount = friendly.size
+                val enemyCount = enemy.size
+
+                when {
+
+                    // nothing to capture
+                    enemyCount == 0 -> {
+                    }
+
+                    // one piece cannot capture a block
+                    friendlyCount == 1 && enemyCount >= 2 -> {
+                    }
+
+                    // enough friendly pieces -> capture everyone
+                    // enough friendly pieces -> capture everyone
+                    friendlyCount >= enemyCount -> {
+
+                        Log.d("TEAM_CAPTURE", "Attacker = $targetIdx")
+                        Log.d("TEAM_CAPTURE", "Friendly = ${friendly.map { it.playerIndex }}")
+                        Log.d("TEAM_CAPTURE", "Enemy = ${enemy.map { it.playerIndex }}")
+
+                        enemy.forEach {
+                            Log.d(
+                                "TEAM_CAPTURE",
+                                "Capturing Player ${it.playerIndex} Token ${it.tokenIndex}"
+                            )
+
+                            it.localPosition = -1
+                            captured.add(it)
                         }
                     }
                 }
             }
         }
-        return MoveResult(reachedFinish, captured, diceValue == 6 || reachedFinish || captured.isNotEmpty())
-    }
 
+        return MoveResult(
+            reachedFinish = reachedFinish,
+            capturedTokens = captured,
+            grantsExtraTurn =
+                diceValue == 6 ||
+                        reachedFinish ||
+                        captured.isNotEmpty()
+        )
+    }
     fun advanceTurn() {
         consecutiveSixesCount = 0
         if (isGameOver()) return
-
         var idx = activePlayers.indexOf(currentPlayerIndex)
         do {
             idx = (idx + 1) % activePlayers.size
@@ -121,15 +207,11 @@ class LudoEngine(
     }
 
     fun isGameOver(): Boolean {
-        return if (isTeamMode) {
-            (players[0].hasWon() && players[2].hasWon()) || (players[1].hasWon() && players[3].hasWon())
-        } else {
-            leaderboard.size >= activePlayers.size - 1
-        }
+        return if (isTeamMode) (players[0].hasWon() && players[2].hasWon()) || (players[1].hasWon() && players[3].hasWon())
+        else leaderboard.size >= activePlayers.size - 1
     }
 
     fun getAbsolutePosition(playerIndex: Int, localPos: Int): Int {
-        // Only return absolute position for the main track (0-50)
         if (localPos !in 0..50) return -1
         return (LudoPathData.START_OFFSETS[playerIndex]!! + localPos) % 52
     }

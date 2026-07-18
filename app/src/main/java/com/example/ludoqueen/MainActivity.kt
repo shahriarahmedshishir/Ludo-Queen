@@ -65,6 +65,8 @@ class MainActivity : AppCompatActivity() {
 
         playerCount = intent.getIntExtra("PLAYER_COUNT", 4)
         isTeamMode = intent.getBooleanExtra("IS_TEAM_MODE", false)
+        Log.d("TEAM_MODE", "playerCount = $playerCount")
+        Log.d("TEAM_MODE", "isTeamMode = $isTeamMode")
 
         val labels = listOf("P1", "P2", "P3", "P4")
         engine = LudoEngine(labels, isTeamMode = isTeamMode)
