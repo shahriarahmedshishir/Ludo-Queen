@@ -197,14 +197,28 @@ class LudoEngine(
         )
     }
     fun advanceTurn() {
+
         consecutiveSixesCount = 0
+
         if (isGameOver()) return
+
         var idx = activePlayers.indexOf(currentPlayerIndex)
+
         do {
+
             idx = (idx + 1) % activePlayers.size
             currentPlayerIndex = activePlayers[idx]
-        } while (players[currentPlayerIndex].hasWon())
+
+            if (!isTeamMode) {
+                if (!players[currentPlayerIndex].hasWon()) break
+            } else {
+                // In Team Mode nobody is skipped until the game ends.
+                break
+            }
+
+        } while (true)
     }
+
 
     fun isGameOver(): Boolean {
         return if (isTeamMode) (players[0].hasWon() && players[2].hasWon()) || (players[1].hasWon() && players[3].hasWon())

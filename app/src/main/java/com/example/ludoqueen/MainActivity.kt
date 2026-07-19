@@ -142,25 +142,37 @@ class MainActivity : AppCompatActivity() {
     private fun updateTurnIndicator(showBanner: Boolean) {
         if (gameOver) return
 
-        val player = engine.currentPlayer()
         tvTurnIndicator.text = ""
 
-        ludoBoardView.activePlayerIndex = engine.currentPlayerIndex
+        var displayPlayer = engine.currentPlayerIndex
+
+        // In Duo mode, if the current player has already finished,
+        // highlight and display the teammate instead.
+        if (isTeamMode && engine.players[displayPlayer].hasWon()) {
+            displayPlayer = when (displayPlayer) {
+                0 -> 2
+                2 -> 0
+                1 -> 3
+                3 -> 1
+                else -> displayPlayer
+            }
+        }
+
+        ludoBoardView.activePlayerIndex = displayPlayer
 
         diceViews.forEachIndexed { index, dice ->
             dice.visibility =
-                if (index in activePlayers) android.view.View.VISIBLE
-                else android.view.View.GONE
+                if (index in activePlayers) View.VISIBLE
+                else View.GONE
 
-            dice.isActive = false
-        }
-
-        if (engine.currentPlayerIndex in activePlayers) {
-            diceViews[engine.currentPlayerIndex].isActive = true
+            dice.isActive = (index == displayPlayer)
         }
 
         if (showBanner) {
-            showTurnBanner(player.label, playerColors[engine.currentPlayerIndex])
+            showTurnBanner(
+                engine.players[displayPlayer].label,
+                playerColors[displayPlayer]
+            )
         }
     }
 
@@ -192,7 +204,21 @@ class MainActivity : AppCompatActivity() {
         playSound(R.raw.sound_roll)
 
         val playerIndex = engine.currentPlayerIndex
-        val diceView = diceViews[playerIndex]
+
+        val tokenOwner =
+            if (isTeamMode && engine.players[playerIndex].hasWon()) {
+                when (playerIndex) {
+                    0 -> 2
+                    2 -> 0
+                    1 -> 3
+                    3 -> 1
+                    else -> playerIndex
+                }
+            } else {
+                playerIndex
+            }
+
+        val diceView = diceViews[tokenOwner]
 
         var shuffleCount = 0
         val shuffleRunnable = object : Runnable {
@@ -214,6 +240,19 @@ class MainActivity : AppCompatActivity() {
     private fun proceedAfterRoll(playerIndex: Int, diceValue: Int) {
         val movable = engine.getMovableTokens(playerIndex, diceValue)
 
+        val tokenOwner =
+            if (isTeamMode && engine.players[playerIndex].hasWon()) {
+                when (playerIndex) {
+                    0 -> 2
+                    2 -> 0
+                    1 -> 3
+                    3 -> 1
+                    else -> playerIndex
+                }
+            } else {
+                playerIndex
+            }
+
         if (movable.isEmpty()) {
             mainHandler.postDelayed({
                 finishTurn(false)
@@ -225,7 +264,7 @@ class MainActivity : AppCompatActivity() {
             val singleToken = movable.first()
             executeTokenMove(playerIndex, singleToken.tokenIndex, diceValue)
         } else {
-            val actualTokenOwnerIndex = movable.first().playerIndex
+            val actualTokenOwnerIndex = tokenOwner
             val interactiveTokens = movable.map { Pair(actualTokenOwnerIndex, it.tokenIndex) }.toSet()
             ludoBoardView.selectableTokens = interactiveTokens
 
@@ -244,37 +283,53 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun executeTokenMove(playerIndex: Int, tokenIndex: Int, diceValue: Int) {
-        val roller = engine.players[playerIndex]
-        val actualTokenOwnerIndex = if (isTeamMode && roller.hasWon()) {
-            if (playerIndex == 0) 2 else if (playerIndex == 2) 0 else if (playerIndex == 1) 3 else 1
-        } else {
-            playerIndex
-        }
+    private fun executeTokenMove(
+        playerIndex: Int,
+        tokenIndex: Int,
+        diceValue: Int
+    ) {
 
-        val activeTokens = engine.players[actualTokenOwnerIndex].tokens
-        val selectedToken = activeTokens.firstOrNull { it.tokenIndex == tokenIndex } ?: return
+        val tokenOwner =
+            if (isTeamMode && engine.players[playerIndex].hasWon()) {
+                when (playerIndex) {
+                    0 -> 2
+                    2 -> 0
+                    1 -> 3
+                    3 -> 1
+                    else -> playerIndex
+                }
+            } else {
+                playerIndex
+            }
 
-        // CRITICAL FIX: Capture the correct original position before the engine logic modifies it
-        val fromLocal = selectedToken.localPosition
+        val token = engine.players[tokenOwner].tokens[tokenIndex]
+        val fromLocal = token.localPosition
 
-        val result = engine.moveToken(playerIndex, tokenIndex, diceValue)
+        val result = engine.moveToken(
+            playerIndex,
+            tokenIndex,
+            diceValue
+        )
 
         ludoBoardView.animateTokenMove(
-            actualTokenOwnerIndex,
+            tokenOwner,
             tokenIndex,
             fromLocal,
-            selectedToken.localPosition
+            token.localPosition
         ) {
+
             if (result.capturedTokens.isNotEmpty()) {
                 playSound(R.raw.sound_capture)
-                result.capturedTokens.forEach { captured ->
+
+                result.capturedTokens.forEach {
+
                     ludoBoardView.snapTokenToYard(
-                        captured.playerIndex,
-                        captured.tokenIndex
+                        it.playerIndex,
+                        it.tokenIndex
                     )
                 }
-            } else if (result.reachedFinish) {
+            }
+            else if (result.reachedFinish) {
                 playSound(R.raw.sound_finish)
             }
 
