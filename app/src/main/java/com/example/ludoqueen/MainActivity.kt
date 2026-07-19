@@ -7,8 +7,6 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.animation.OvershootInterpolator
-import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -19,7 +17,9 @@ import java.util.Collections
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
 import android.view.View
-
+import android.widget.TextView
+import android.widget.Toast
+import android.widget.Button
 class MainActivity : AppCompatActivity() {
 
     private lateinit var tvHeader: TextView
@@ -144,34 +144,20 @@ class MainActivity : AppCompatActivity() {
 
         tvTurnIndicator.text = ""
 
-        var displayPlayer = engine.currentPlayerIndex
-
-        // In Duo mode, if the current player has already finished,
-        // highlight and display the teammate instead.
-        if (isTeamMode && engine.players[displayPlayer].hasWon()) {
-            displayPlayer = when (displayPlayer) {
-                0 -> 2
-                2 -> 0
-                1 -> 3
-                3 -> 1
-                else -> displayPlayer
-            }
-        }
-
-        ludoBoardView.activePlayerIndex = displayPlayer
+        ludoBoardView.activePlayerIndex = engine.currentPlayerIndex
 
         diceViews.forEachIndexed { index, dice ->
             dice.visibility =
                 if (index in activePlayers) View.VISIBLE
                 else View.GONE
 
-            dice.isActive = (index == displayPlayer)
+            dice.isActive = (index == engine.currentPlayerIndex)
         }
 
         if (showBanner) {
             showTurnBanner(
-                engine.players[displayPlayer].label,
-                playerColors[displayPlayer]
+                engine.currentPlayer().label,
+                playerColors[engine.currentPlayerIndex]
             )
         }
     }
@@ -203,24 +189,12 @@ class MainActivity : AppCompatActivity() {
 
         playSound(R.raw.sound_roll)
 
+        // The current player's dice always rolls.
         val playerIndex = engine.currentPlayerIndex
-
-        val tokenOwner =
-            if (isTeamMode && engine.players[playerIndex].hasWon()) {
-                when (playerIndex) {
-                    0 -> 2
-                    2 -> 0
-                    1 -> 3
-                    3 -> 1
-                    else -> playerIndex
-                }
-            } else {
-                playerIndex
-            }
-
-        val diceView = diceViews[tokenOwner]
+        val diceView = diceViews[playerIndex]
 
         var shuffleCount = 0
+
         val shuffleRunnable = object : Runnable {
             override fun run() {
                 if (shuffleCount < 7) {
@@ -230,10 +204,13 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     val diceValue = engine.rollDice(playerIndex)
                     diceView.value = diceValue
+
+                    // Engine decides whether this moves teammate's token.
                     proceedAfterRoll(playerIndex, diceValue)
                 }
             }
         }
+
         mainHandler.post(shuffleRunnable)
     }
 
@@ -351,26 +328,83 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleGameOverState() {
+
         gameOver = true
         playSound(R.raw.sound_win)
         isTurnInProgress.set(false)
 
+        val dialogView = layoutInflater.inflate(R.layout.dialog_game_over, null)
+
+        val tvWinner = dialogView.findViewById<TextView>(R.id.tvWinner)
+        val tvRanking = dialogView.findViewById<TextView>(R.id.tvRanking)
+
         if (isTeamMode) {
+
             val team1Won = engine.players[0].hasWon() && engine.players[2].hasWon()
-            tvTurnIndicator.text = if (team1Won) "🏆 TEAM RED/YELLOW WINS!" else "🏆 TEAM GREEN/BLUE WINS!"
+
+            tvWinner.text =
+                if (team1Won)
+                    "🏆 TEAM RED & YELLOW WIN!"
+                else
+                    "🏆 TEAM GREEN & BLUE WIN!"
+
+            tvRanking.text =
+                if (team1Won)
+                    "Congratulations!"
+                else
+                    "Congratulations!"
+
         } else {
+
             val allIndices = (0 until playerCount).toList()
-            val loserIndex = allIndices.firstOrNull { !engine.leaderboard.contains(it) } ?: 3
+            val loserIndex =
+                allIndices.firstOrNull { !engine.leaderboard.contains(it) } ?: 3
 
-            val rankBuilder = StringBuilder("🎮 Match Placements:\n")
-            engine.leaderboard.forEachIndexed { index, pIdx ->
-                rankBuilder.append("${index + 1}st: ${engine.players[pIdx].label}\n")
+            val ranking = mutableListOf<Int>()
+            ranking.addAll(engine.leaderboard)
+
+            if (!ranking.contains(loserIndex))
+                ranking.add(loserIndex)
+
+            tvWinner.text =
+                "🏆 ${engine.players[ranking.first()].label} Wins!"
+
+            val sb = StringBuilder()
+
+            ranking.forEachIndexed { index, player ->
+
+                sb.append("${index + 1}. ${engine.players[player].label}")
+
+                if (index != ranking.lastIndex)
+                    sb.append("\n")
             }
-            rankBuilder.append("${engine.leaderboard.size + 1}th: ${engine.players[loserIndex].label}")
 
-            tvTurnIndicator.text = "🏆 Game Over!"
-            Toast.makeText(this, rankBuilder.toString(), Toast.LENGTH_LONG).show()
+            tvRanking.text = sb.toString()
         }
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(false)
+            .create()
+
+        dialogView.findViewById<Button>(R.id.btnRestart).setOnClickListener {
+
+            dialog.dismiss()
+
+            finish()
+
+            startActivity(intent)
+
+        }
+
+        dialogView.findViewById<Button>(R.id.btnExit).setOnClickListener {
+
+            dialog.dismiss()
+            finish()
+
+        }
+
+        dialog.show()
     }
 
     private fun startSocketServer() {
